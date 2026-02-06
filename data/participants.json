@@ -1,0 +1,28 @@
+[
+  {
+    "id": "1770341141703",
+    "name": "Surya Aji Pratama",
+    "npk": "A2852",
+    "attendance": "hadir",
+    "comment": "abcd",
+    "submittedAt": "2026-02-06T01:25:41.703Z"
+  },
+  {
+    "id": "1770345726573",
+    "name": "Burhan",
+    "npk": "A2823",
+    "section": "BE",
+    "attendance": "hadir",
+    "comment": "Kantornya jelek",
+    "submittedAt": "2026-02-06T02:42:06.573Z"
+  },
+  {
+    "id": "1770346653117",
+    "name": "Deren",
+    "npk": "A2876",
+    "section": "FE",
+    "attendance": "absen",
+    "comment": "Sorry gabisa dateng",
+    "submittedAt": "2026-02-06T02:57:33.117Z"
+  }
+]
