@@ -118,7 +118,7 @@ export default function AdminDashboardClient({ initialParticipants, commentsCoun
                     {/* Add Walk-in Button */}
                     <button
                         onClick={() => setIsCreateModalOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-islamic-green hover:bg-emerald-600 text-white rounded-lg font-bold shadow-lg shadow-islamic-green/20 transition-all active:scale-95"
+                        className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-bold shadow-lg shadow-islamic-green/20 transition-all active:scale-95"
                     >
                         <Plus className="w-5 h-5" />
                         Daftar Dadakan
@@ -371,7 +371,7 @@ function CreateParticipantModal({
                     <button
                         type="submit"
                         disabled={createMutation.isPending}
-                        className="w-full bg-islamic-green hover:bg-emerald-600 text-white font-bold py-3 rounded-xl mt-4 flex items-center justify-center gap-2"
+                        className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl mt-4 flex items-center justify-center gap-2"
                     >
                         {createMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
                         Simpan & Check-in

@@ -30,8 +30,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "TechnoDay - Ramadhan Pit Stop",
-  description: "Join us for Ramadhan Pit Stop!",
+  title: "TechnoDay 🕌 Ramadhan Pit Stop",
+  description: "Siap Menang Banyak di Bulan Ramadhan? Join us!",
 };
 
 export default function RootLayout({
