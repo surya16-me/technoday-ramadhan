@@ -60,19 +60,36 @@ export default function AdminDashboardClient({ initialParticipants, commentsCoun
         setParticipants(initialParticipants);
     }, [initialParticipants]);
 
-    // Toggle Check-in Logic
-    const toggleCheckIn = async (id: number, currentStatus: boolean) => {
+    // Check-in Confirmation State
+    const [checkInTarget, setCheckInTarget] = useState<{ id: number; currentStatus: boolean; name: string } | null>(null);
+
+    // Toggle Check-in Logic (Triggers Modal)
+    const toggleCheckIn = (id: number, currentStatus: boolean, name: string) => {
+        setCheckInTarget({ id, currentStatus, name });
+    };
+
+    // Execute Check-in after confirmation
+    const confirmCheckIn = () => {
+        if (!checkInTarget) return;
+
+        const { id, currentStatus } = checkInTarget;
+
         // Optimistic update
         setParticipants(prev => prev.map(p =>
             p.id === id ? { ...p, isCheckedIn: !currentStatus } : p
         ));
 
         checkInMutation.mutate({ id, isCheckedIn: !currentStatus }, {
+            onSuccess: () => {
+                setCheckInTarget(null);
+                showAlert(`Berhasil ${!currentStatus ? 'check-in' : 'cancel check-in'} peserta!`, "success");
+            },
             onError: (error) => {
                 // Revert on error
                 setParticipants(prev => prev.map(p =>
                     p.id === id ? { ...p, isCheckedIn: currentStatus } : p
                 ));
+                setCheckInTarget(null);
                 showAlert("Gagal update status check-in", "error");
             }
         });
@@ -220,7 +237,7 @@ export default function AdminDashboardClient({ initialParticipants, commentsCoun
                                                             type="checkbox"
                                                             className="sr-only"
                                                             checked={!!p.isCheckedIn}
-                                                            onChange={() => toggleCheckIn(p.id, !!p.isCheckedIn)}
+                                                            onChange={() => toggleCheckIn(p.id, !!p.isCheckedIn, p.name)}
                                                         />
                                                         <div className={`w-6 h-6 border-2 rounded-md transition-all flex items-center justify-center text-white ${p.isCheckedIn
                                                             ? "bg-islamic-green border-islamic-green"
@@ -288,13 +305,58 @@ export default function AdminDashboardClient({ initialParticipants, commentsCoun
                 <ShuffleCard />
             )}
 
+            {/* Check-in Confirmation Modal */}
+            {checkInTarget && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative text-center">
+                        <div className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-4 ${!checkInTarget.currentStatus ? 'bg-islamic-green/20' : 'bg-racing-red/20'}`}>
+                            {!checkInTarget.currentStatus ? (
+                                <CheckCircle2 className="w-8 h-8 text-islamic-green" />
+                            ) : (
+                                <X className="w-8 h-8 text-racing-red" />
+                            )}
+                        </div>
+
+                        <h3 className="text-xl font-bold text-white mb-2">
+                            {!checkInTarget.currentStatus ? "Konfirmasi Check-In" : "Batalkan Check-In"}
+                        </h3>
+                        <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
+                            {!checkInTarget.currentStatus ? (
+                                <>Apakah antum yakin ingin melakukan check-in untuk peserta <b>{checkInTarget.name}</b>?</>
+                            ) : (
+                                <>Apakah antum yakin ingin membatalkan status check-in untuk <b>{checkInTarget.name}</b>?</>
+                            )}
+                        </p>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setCheckInTarget(null)}
+                                className="flex-1 py-2.5 px-4 rounded-xl font-medium border border-zinc-700 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                onClick={() => confirmCheckIn()}
+                                className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-white transition-all active:scale-95 shadow-lg ${!checkInTarget.currentStatus
+                                    ? "bg-islamic-green hover:bg-emerald-600 shadow-islamic-green/20"
+                                    : "bg-racing-red hover:bg-red-700 shadow-racing-red/20"
+                                    }`}
+                            >
+                                {!checkInTarget.currentStatus ? "Ya, Check-In" : "Ya, Batalkan"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Create Participant Modal */}
             {isCreateModalOpen && (
                 <CreateParticipantModal
                     onClose={() => setIsCreateModalOpen(false)}
                     onSuccess={(msg) => {
+                        // refetch handled by hook via router.refresh() 
+                        // But we want to close modal and show alert
                         setIsCreateModalOpen(false);
-                        // router.refresh(); // Already handled by hook
                         showAlert(msg || "Peserta berhasil didaftarkan!", "success");
                     }}
                     onError={(msg) => showAlert(msg, "error")}
@@ -320,7 +382,7 @@ function CreateParticipantModal({
         e.preventDefault();
         createMutation.mutate(formData, {
             onSuccess: (data) => onSuccess(data.message),
-            onError: (error: any) => onError(error?.response?.data?.error || "Failed to create participant")
+            onError: (error: any) => onError(error?.message || "Failed to create participant")
         });
     };
 
@@ -342,6 +404,7 @@ function CreateParticipantModal({
                             className="w-full bg-black/50 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:border-islamic-green outline-none transition-colors"
                             value={formData.name}
                             onChange={e => setFormData({ ...formData, name: e.target.value })}
+                            placeholder="Contoh: Fulan bin Fulan"
                         />
                     </div>
                     <div>
@@ -351,6 +414,7 @@ function CreateParticipantModal({
                             className="w-full bg-black/50 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:border-islamic-green outline-none transition-colors"
                             value={formData.npk}
                             onChange={e => setFormData({ ...formData, npk: e.target.value })}
+                            placeholder="Contoh: 123456"
                         />
                     </div>
                     <div>
@@ -373,7 +437,7 @@ function CreateParticipantModal({
                         disabled={createMutation.isPending}
                         className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl mt-4 flex items-center justify-center gap-2"
                     >
-                        {createMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                        {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
                         Simpan & Check-in
                     </button>
                 </form>
