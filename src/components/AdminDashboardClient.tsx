@@ -8,6 +8,7 @@ import AdminShell from "@/components/AdminShell";
 import Alert from "@/components/Alert";
 import { SECTIONS } from "@/lib/constants";
 import * as XLSX from "xlsx";
+import { useCheckInParticipant, useCreateParticipant } from "@/hooks/useParticipants";
 
 interface Participant {
     id: number;
@@ -48,6 +49,7 @@ export default function AdminDashboardClient({ initialParticipants, commentsCoun
     });
 
     const router = useRouter();
+    const checkInMutation = useCheckInParticipant();
 
     const showAlert = (message: string, type: "success" | "error" = "success") => {
         setAlertConfig({ isOpen: true, message, type });
@@ -55,7 +57,6 @@ export default function AdminDashboardClient({ initialParticipants, commentsCoun
 
     // Sync state when props change (e.g. after router.refresh())
     useEffect(() => {
-        // console.log("Init Participants:", initialParticipants);
         setParticipants(initialParticipants);
     }, [initialParticipants]);
 
@@ -66,21 +67,15 @@ export default function AdminDashboardClient({ initialParticipants, commentsCoun
             p.id === id ? { ...p, isCheckedIn: !currentStatus } : p
         ));
 
-        try {
-            const res = await fetch("/api/admin/check-in", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id, isCheckedIn: !currentStatus }),
-            });
-            if (!res.ok) throw new Error("Failed to update");
-            router.refresh();
-        } catch (error) {
-            // Revert on error
-            setParticipants(prev => prev.map(p =>
-                p.id === id ? { ...p, isCheckedIn: currentStatus } : p
-            ));
-            showAlert("Gagal update status check-in", "error");
-        }
+        checkInMutation.mutate({ id, isCheckedIn: !currentStatus }, {
+            onError: (error) => {
+                // Revert on error
+                setParticipants(prev => prev.map(p =>
+                    p.id === id ? { ...p, isCheckedIn: currentStatus } : p
+                ));
+                showAlert("Gagal update status check-in", "error");
+            }
+        });
     };
 
     const filteredParticipants = participants.filter((p) => {
@@ -176,6 +171,7 @@ export default function AdminDashboardClient({ initialParticipants, commentsCoun
                                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-4 py-3 focus:ring-2 focus:ring-zinc-700 outline-none transition-all appearance-none text-zinc-300 cursor-pointer"
                             >
                                 <option value="">Semua Section</option>
+                                <option value="Bukan Peserta">Bukan Peserta</option>
                                 {SECTIONS.map(sec => (
                                     <option key={sec} value={sec}>{sec}</option>
                                 ))}
@@ -298,7 +294,7 @@ export default function AdminDashboardClient({ initialParticipants, commentsCoun
                     onClose={() => setIsCreateModalOpen(false)}
                     onSuccess={(msg) => {
                         setIsCreateModalOpen(false);
-                        router.refresh();
+                        // router.refresh(); // Already handled by hook
                         showAlert(msg || "Peserta berhasil didaftarkan!", "success");
                     }}
                     onError={(msg) => showAlert(msg, "error")}
@@ -318,25 +314,14 @@ function CreateParticipantModal({
     onError: (msg: string) => void
 }) {
     const [formData, setFormData] = useState({ name: "", npk: "", section: "" });
-    const [loading, setLoading] = useState(false);
+    const createMutation = useCreateParticipant();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
-        try {
-            const res = await fetch("/api/admin/participants/create", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData)
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error);
-            onSuccess(data.message);
-        } catch (error: any) {
-            onError(error.message);
-        } finally {
-            setLoading(false);
-        }
+        createMutation.mutate(formData, {
+            onSuccess: (data) => onSuccess(data.message),
+            onError: (error: any) => onError(error?.response?.data?.error || "Failed to create participant")
+        });
     };
 
     return (
@@ -385,10 +370,10 @@ function CreateParticipantModal({
 
                     <button
                         type="submit"
-                        disabled={loading}
+                        disabled={createMutation.isPending}
                         className="w-full bg-islamic-green hover:bg-emerald-600 text-white font-bold py-3 rounded-xl mt-4 flex items-center justify-center gap-2"
                     >
-                        {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                        {createMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
                         Simpan & Check-in
                     </button>
                 </form>

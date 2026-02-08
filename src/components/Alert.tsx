@@ -40,8 +40,8 @@ export default function Alert({
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -20, scale: 0.9 }}
                         className={`pointer-events-auto flex items-center gap-3 p-4 rounded-xl shadow-2xl border backdrop-blur-md ${type === "success"
-                                ? "bg-islamic-green/90 border-islamic-green/50 text-white shadow-islamic-green/20"
-                                : "bg-racing-red/90 border-racing-red/50 text-white shadow-racing-red/20"
+                            ? "bg-emerald-900/90 border-emerald-500/50 text-white shadow-emerald-500/20"
+                            : "bg-red-900/90 border-red-500/50 text-white shadow-red-500/20"
                             }`}
                     >
                         <div className={`p-2 rounded-full ${type === "success" ? "bg-white/20" : "bg-white/20"}`}>

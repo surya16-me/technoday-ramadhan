@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Moon, Users, Trophy, ChevronLeft } from "lucide-react";
 import Link from "next/link";
+import GroupsList from "@/components/GroupsList";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -75,76 +76,7 @@ export default async function GroupsDisplayPage() {
 
                 {/* Groups Grid */}
                 {groups.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto w-full">
-                        {groups.map((group) => (
-                            <div
-                                key={group.id}
-                                className="relative group/card"
-                            >
-                                {/* Glowing backdrop */}
-                                <div
-                                    className="absolute inset-0 blur-xl opacity-20 group-hover/card:opacity-40 transition-opacity rounded-3xl"
-                                    style={{ backgroundColor: group.color }}
-                                ></div>
-
-                                {/* Main Card */}
-                                <div className="relative bg-rama-black/40 backdrop-blur-md border border-white/10 rounded-3xl overflow-hidden shadow-2xl h-full flex flex-col">
-                                    {/* Group Header */}
-                                    <div
-                                        className="p-6 text-center border-b border-white/10"
-                                        style={{ backgroundColor: `${group.color}20` }}
-                                    >
-                                        <div
-                                            className="inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest mb-2 border"
-                                            style={{ borderColor: group.color, color: group.color }}
-                                        >
-                                            Group {group.groupNumber}
-                                        </div>
-                                        <h2
-                                            className="text-2xl md:text-3xl font-bold font-majestic tracking-tight"
-                                            style={{ color: group.color }}
-                                        >
-                                            {group.groupName}
-                                        </h2>
-                                    </div>
-
-                                    {/* Members List */}
-                                    <div className="p-6 flex-grow">
-                                        <div className="flex items-center gap-2 mb-4 text-rama-white/50 text-xs font-semibold uppercase tracking-widest">
-                                            <Users className="w-4 h-4" />
-                                            <span>Team Members ({group.participants.length})</span>
-                                        </div>
-                                        <div className="space-y-3">
-                                            {group.participants.map((person, idx) => (
-                                                <div
-                                                    key={person.id}
-                                                    className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors"
-                                                >
-                                                    <div className="w-8 h-8 rounded-full bg-rama-dark-green flex items-center justify-center text-rama-gold text-xs font-bold border border-rama-gold/30">
-                                                        {idx + 1}
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-white font-medium text-sm md:text-base leading-tight">
-                                                            {person.name}
-                                                        </span>
-                                                        <span className="text-[10px] text-rama-white/40 uppercase tracking-tighter">
-                                                            {person.section}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Footer decoration */}
-                                    <div
-                                        className="h-2 w-full"
-                                        style={{ backgroundColor: group.color }}
-                                    ></div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    <GroupsList initialGroups={groups} />
                 ) : (
                     <div className="flex flex-col items-center justify-center py-20 text-center">
                         <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-6">

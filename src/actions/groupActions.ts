@@ -1,16 +1,12 @@
-import { NextResponse } from "next/server";
+"use server";
+
 import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
-export async function POST(request: Request) {
+export async function generateGroups({ groupCount }: { groupCount: number }) {
     try {
-        const body = await request.json();
-        const { groupCount } = body;
-
         if (!groupCount || groupCount < 1) {
-            return NextResponse.json(
-                { error: "Jumlah kelompok harus minimal 1" },
-                { status: 400 }
-            );
+            throw new Error("Jumlah kelompok harus minimal 1");
         }
 
         const participants = await prisma.trn_register.findMany({
@@ -20,10 +16,7 @@ export async function POST(request: Request) {
         });
 
         if (participants.length === 0) {
-            return NextResponse.json(
-                { error: "Belum ada peserta yang hadir untuk dibagi kelompok" },
-                { status: 400 }
-            );
+            throw new Error("Belum ada peserta yang hadir untuk dibagi kelompok");
         }
 
         // 1. Group participants by section
@@ -61,13 +54,6 @@ export async function POST(request: Request) {
             });
         }
 
-        // 3. Simple shuffle of the balanced list? 
-        // actually, we want to keep the "one from A, one from B, one from C" order 
-        // so when we deal them into groups (1, 2, 3, ...), they get spread out.
-        // But to add randomness, we can shuffle the order of sections before picking?
-        // Let's just use the balancedList. distributing it to groups 1..N sequentially 
-        // will naturally spread the sections.
-
         const participantsToAssign = balancedList;
 
         const groupThemes = [
@@ -95,6 +81,7 @@ export async function POST(request: Request) {
             { name: "Sirup Speed", color: "#ec4899" }, // Pink
         ];
 
+        // Reset existing groups
         await (prisma as any).$transaction([
             (prisma as any).trn_register.updateMany({
                 data: { groupId: null }
@@ -106,10 +93,11 @@ export async function POST(request: Request) {
             const createdGroups = [];
             for (let i = 0; i < groupCount; i++) {
                 const theme = groupThemes[i % groupThemes.length];
+                const groupName = `${theme.name} ${i + 1 > groupThemes.length ? Math.ceil((i + 1) / groupThemes.length) : ''}`.trim();
                 const group = await tx.trn_group.create({
                     data: {
                         groupNumber: i + 1,
-                        groupName: `${theme.name} ${i + 1 > groupThemes.length ? Math.ceil((i + 1) / groupThemes.length) : ''}`.trim(),
+                        groupName,
                         color: theme.color
                     }
                 });
@@ -127,9 +115,47 @@ export async function POST(request: Request) {
             return createdGroups;
         });
 
-        return NextResponse.json({ success: true, count: result.length });
+        revalidatePath("/admin/groups");
+        revalidatePath("/groups"); // Revalidate public groups page too
+
+        return { success: true, count: result.length };
     } catch (error: any) {
         console.error("Group generation error:", error);
-        return NextResponse.json({ error: "Gagal membuat kelompok" }, { status: 500 });
+        throw new Error(error.message || "Gagal membuat kelompok");
+    }
+}
+
+export async function deleteGroups() {
+    try {
+        await (prisma as any).$transaction([
+            (prisma as any).trn_register.updateMany({
+                data: { groupId: null }
+            }),
+            (prisma as any).trn_group.deleteMany({})
+        ]);
+
+        revalidatePath("/admin/groups");
+        revalidatePath("/groups");
+
+        return { success: true };
+    } catch (error: any) {
+        console.error("Delete groups error:", error);
+        throw new Error("Gagal menghapus kelompok");
+    }
+}
+
+export async function assignGroup({ participantId, groupId }: { participantId: number; groupId: number | null }) {
+    try {
+        await (prisma as any).trn_register.update({
+            where: { id: participantId },
+            data: { groupId }
+        });
+
+        revalidatePath("/admin/groups");
+
+        return { success: true };
+    } catch (error: any) {
+        console.error("Assign group error:", error);
+        throw new Error("Gagal memindahkan peserta");
     }
 }

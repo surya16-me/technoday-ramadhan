@@ -1,40 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Shuffle, Quote, Loader2 } from "lucide-react";
-
-interface Comment {
-    id: number;
-    content: string;
-    createdAt: Date;
-}
+import { useShuffleComments } from "@/hooks/useComments";
+import { Comment } from "@/services/commentService";
 
 export default function ShuffleCard() {
-    const [comments, setComments] = useState<Comment[]>([]);
+    const { data: comments = [], isLoading, isError } = useShuffleComments();
     const [currentCard, setCurrentCard] = useState<Comment | null>(null);
     const [isShuffling, setIsShuffling] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        fetchComments();
-    }, []);
-
-    const fetchComments = async () => {
-        try {
-            setIsLoading(true);
-            const res = await fetch('/api/comments/shuffle');
-            const data = await res.json();
-            setComments(data);
-        } catch (error) {
-            console.error('Failed to fetch comments:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     const shuffle = () => {
-        if (comments.length === 0) return;
+        if (!comments || comments.length === 0) return;
         setIsShuffling(true);
         setCurrentCard(null);
 
@@ -55,6 +33,14 @@ export default function ShuffleCard() {
         return (
             <div className="flex items-center justify-center p-12">
                 <Loader2 className="w-8 h-8 animate-spin text-rama-gold" />
+            </div>
+        );
+    }
+
+    if (isError) {
+        return (
+            <div className="text-center p-12 text-zinc-500">
+                Gagal memuat kartu. Silakan refresh.
             </div>
         );
     }

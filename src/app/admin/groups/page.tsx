@@ -14,21 +14,25 @@ export default async function AdminGroupsPage() {
         redirect("/admin/login");
     }
 
-    // Load available participants who are attending
-    const participants = await prisma.trn_register.findMany({
+    // Load all participants who are attending
+    const allParticipants = await prisma.trn_register.findMany({
         where: {
             attendance: "hadir",
             isCheckedIn: true
         },
-        select: { id: true, name: true, section: true }
+        select: { id: true, name: true, section: true, groupId: true }
     });
+
+    // Separate into unassigned
+    const unassignedParticipants = allParticipants.filter(p => !p.groupId);
 
     // Load current groups
     // @ts-ignore
     const currentGroups = await (prisma as any).trn_group.findMany({
         include: {
             participants: {
-                select: { id: true, name: true, section: true }
+                select: { id: true, name: true, section: true },
+                orderBy: { name: 'asc' }
             }
         },
         orderBy: { groupNumber: 'asc' }
@@ -37,7 +41,8 @@ export default async function AdminGroupsPage() {
     return (
         <AdminGroupManager
             initialGroups={currentGroups}
-            attendingCount={participants.length}
+            unassignedParticipants={unassignedParticipants}
+            attendingCount={allParticipants.length}
         />
     );
 }
