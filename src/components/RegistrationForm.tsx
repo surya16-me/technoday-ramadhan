@@ -6,6 +6,8 @@ import { CheckCircle2, AlertCircle, Loader2, Send, User, CreditCard, Smile, Brie
 import { SECTIONS } from "@/lib/constants";
 import { useRegisterParticipant } from "@/hooks/useParticipants";
 
+import { validateInput } from "@/lib/validation";
+
 export default function RegistrationForm() {
   const [formData, setFormData] = useState({
     name: "",
@@ -15,24 +17,35 @@ export default function RegistrationForm() {
     comment: "",
   });
 
+  const [validationError, setValidationError] = useState<string | null>(null);
+
   const mutation = useRegisterParticipant();
-
-  // Helper to handle success side effect since we can't pass onSuccess to the hook call directly easily without refactoring hook
-  // But wait, useRegisterParticipant returns result of useMutation.
-  // We can attach onSuccess to mutate() or configure it in the hook.
-  // In the hook I didn't configure onSuccess.
-  // So I can just use mutation.mutate(data, { onSuccess: ... })
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setValidationError(null);
+
+    // Validate Input
+    const nameValidation = validateInput(formData.name);
+    if (!nameValidation.isValid) {
+      setValidationError(`Nama: ${nameValidation.message}`);
+      return;
+    }
+
+    const commentValidation = validateInput(formData.comment);
+    if (!commentValidation.isValid) {
+      setValidationError(`Komentar: ${commentValidation.message}`);
+      return;
+    }
+
     const submitData = {
       ...formData,
-      attendance: "hadir" // Force attendance to "hadir" regardless of which radio is selected
+      attendance: "hadir"
     };
     mutation.mutate(submitData, {
       onSuccess: () => {
         setFormData({ name: "", npk: "", section: "", attendance: "hadir", comment: "" });
+        setValidationError(null);
       }
     });
   };
@@ -204,6 +217,20 @@ export default function RegistrationForm() {
                 </div>
               </div>
             </div>
+
+            {validationError && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-start gap-3 text-rama-maroon text-sm bg-rama-maroon/10 p-4 rounded-xl border-2 border-rama-maroon/30 shadow-lg shadow-rama-maroon/10"
+              >
+                <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 animate-pulse" />
+                <div className="flex-1">
+                  <p className="font-semibold mb-1">⚠️ Periksa Input Antum!</p>
+                  <p>{validationError}</p>
+                </div>
+              </motion.div>
+            )}
 
             {mutation.isError && (
               <motion.div

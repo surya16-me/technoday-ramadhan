@@ -366,6 +366,8 @@ export default function AdminDashboardClient({ initialParticipants, commentsCoun
     );
 }
 
+import { validateInput } from "@/lib/validation";
+
 function CreateParticipantModal({
     onClose,
     onSuccess,
@@ -380,6 +382,14 @@ function CreateParticipantModal({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Validate
+        const nameValidation = validateInput(formData.name);
+        if (!nameValidation.isValid) {
+            onError(nameValidation.message || "Input tidak valid");
+            return;
+        }
+
         createMutation.mutate(formData, {
             onSuccess: (data) => onSuccess(data.message),
             onError: (error: any) => onError(error?.message || "Failed to create participant")
