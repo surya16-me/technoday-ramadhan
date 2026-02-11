@@ -7,6 +7,7 @@ import Lanterns from "@/components/Lanterns";
 import FloatingStars from "@/components/FloatingStars";
 import RacingDecorations from "@/components/RacingDecorations";
 import SplashScreen from "@/components/SplashScreen";
+import Fireflies from "@/components/Fireflies";
 import { Moon } from "lucide-react";
 
 export default function Home() {
@@ -57,6 +58,23 @@ export default function Home() {
             <h1 className="text-4xl md:text-7xl font-sans font-black tracking-[0.2em] text-white/90 animate-in slide-in-from-bottom-8 duration-1000 delay-500 drop-shadow-2xl">
               PIT STOP
             </h1>
+            <div className="mt-8 animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-500 relative inline-block group">
+              {/* Fireflies Effect */}
+              <div className="absolute inset-0 -m-8 pointer-events-none z-0">
+                <Fireflies />
+              </div>
+
+              {/* Tagline Pill */}
+              <div className="relative z-10 inline-flex flex-col md:flex-row items-center gap-2 md:gap-4 px-6 py-3 rounded-full border border-rama-gold/30 bg-gradient-to-r from-rama-gold/5 via-rama-gold/10 to-rama-gold/5 backdrop-blur-sm shadow-[0_0_20px_rgba(255,200,69,0.1)] hover:border-rama-gold/50 transition-all">
+                <span className="text-white/90 font-serif italic text-lg tracking-wide group-hover:text-white transition-colors">
+                  Refuel the Soul
+                </span>
+                <div className="hidden md:block w-1.5 h-1.5 rounded-full bg-rama-gold animate-pulse"></div>
+                <span className="text-rama-gold font-serif italic font-semibold text-lg tracking-wide group-hover:text-amber-300 transition-colors" style={{ textShadow: '0 0 10px rgba(255,200,69,0.2)' }}>
+                  Accelerate the Goal
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -125,7 +143,7 @@ export default function Home() {
           </div>
           <div className="flex flex-col items-center md:items-end gap-1">
             <span className="text-rama-gold font-serif italic text-lg">Details</span>
-            <p>16.30 - 18.15 • Bebas Sopan</p>
+            <p>16.30 - Selesai • Bebas Sopan Tema Ramadhan</p>
           </div>
         </div>
 

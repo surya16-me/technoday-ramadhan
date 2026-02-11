@@ -55,11 +55,33 @@ function Lantern({ left, delay, duration, scale }: { left: string, delay: number
                         <path d="M15 50L25 50L20 60L15 50Z" fill="#FFC845" />
                     </svg>
 
-                    {/* Light Glow */}
+                    {/* Main Inner Light Source */}
                     <motion.div
-                        animate={{ opacity: [0.4, 0.8, 0.4] }}
-                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay }}
-                        className="absolute top-[20px] left-[10px] w-[20px] h-[25px] bg-yellow-200 blur-md rounded-full"
+                        animate={{
+                            opacity: [0.6, 1, 0.7, 0.9, 0.6, 1, 0.8],
+                            scale: [0.9, 1.1, 0.95, 1.05, 0.9, 1.1, 0.95],
+                            backgroundColor: ["#fef9c3", "#fde047", "#fef9c3", "#eab308", "#fef9c3"] // yellow-100 -> yellow-300 -> yellow-100 -> yellow-500
+                        }}
+                        transition={{
+                            duration: Math.random() * 2 + 1.5, // Randomize duration slightly for each instance
+                            repeat: Infinity,
+                            ease: "easeInOut",
+                            times: [0, 0.2, 0.4, 0.6, 0.8, 0.9, 1],
+                            delay: Math.random() // Random startup
+                        }}
+                        className="absolute top-[18px] left-[10px] w-[20px] h-[30px] rounded-full blur-md z-10 block"
+                    />
+
+                    {/* Outer Ambient Glow - Softer & Larger */}
+                    <motion.div
+                        animate={{ opacity: [0.2, 0.5, 0.3] }}
+                        transition={{
+                            duration: 3,
+                            repeat: Infinity,
+                            ease: "easeInOut",
+                            delay: delay
+                        }}
+                        className="absolute top-[10px] left-[0px] w-[40px] h-[50px] bg-orange-400/30 blur-xl rounded-full z-0 block"
                     />
                 </div>
             </div>

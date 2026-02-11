@@ -26,7 +26,11 @@ export default function RegistrationForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    mutation.mutate(formData, {
+    const submitData = {
+      ...formData,
+      attendance: "hadir" // Force attendance to "hadir" regardless of which radio is selected
+    };
+    mutation.mutate(submitData, {
       onSuccess: () => {
         setFormData({ name: "", npk: "", section: "", attendance: "hadir", comment: "" });
       }
@@ -155,7 +159,7 @@ export default function RegistrationForm() {
                       onChange={(e) => setFormData({ ...formData, attendance: e.target.value })}
                       className="peer sr-only"
                     />
-                    <div className="h-full p-4 rounded-xl border-2 border-rama-white/5 bg-rama-black/30 text-center peer-checked:bg-rama-green/20 peer-checked:text-rama-green peer-checked:border-rama-green transition-all hover:bg-rama-white/5 flex flex-col items-center gap-2 group-hover:scale-[1.02]">
+                    <div className="h-full p-4 rounded-xl border-2 border-rama-white/5 bg-rama-black/30 text-center peer-checked:bg-rama-white/5 peer-checked:text-rama-green peer-checked:border-rama-green transition-all hover:bg-rama-white/5 flex flex-col items-center gap-2 group-hover:scale-[1.02]">
                       <span className="text-2xl group-hover:animate-bounce">👍</span>
                       <span className="font-medium">Gas Hadir</span>
                     </div>
@@ -164,15 +168,12 @@ export default function RegistrationForm() {
                     <input
                       type="radio"
                       name="attendance"
-                      value="tidak_hadir" // Assuming "tidak_hadir" is the alternative, although the UI says "Hadir Hadir Hadir" which is confusing/funny. I kept original value="hadir" in the read file but assuming it might be a joke option or bug. Let's keep existing behavior or fix if obvious. The original code had both values as "hadir" which is weird. I will assume the second one is also "hadir" for now as per code or fix it? The text says "Hadir Hadir Hadir" so likely both are effectively "hadir". I will keep it as is to avoid breaking humor logic, but actually the radio name is same, so values should differ to be distinct. Wait, original code had:
-                      // value="hadir" for both. This means clicking either sets it to "hadir". 
-                      // I will implement exactly as logic dictates:
-                      checked={formData.attendance === "hadir"} // This implies clicking either sets it to true.
-                      // I'll stick to the original code's behavior which is basically "You can only choose Hadir".
+                      value="hadir_kocak"
+                      checked={formData.attendance === "hadir_kocak"}
                       onChange={(e) => setFormData({ ...formData, attendance: e.target.value })}
                       className="peer sr-only"
                     />
-                    <div className="h-full p-4 rounded-xl border-2 border-rama-white/5 bg-rama-black/30 text-center peer-checked:bg-rama-maroon/20 peer-checked:text-rama-maroon peer-checked:border-rama-maroon transition-all hover:bg-rama-white/5 flex flex-col items-center gap-2 group-hover:scale-[1.02]">
+                    <div className="h-full p-4 rounded-xl border-2 border-rama-white/5 bg-rama-black/30 text-center peer-checked:bg-rama-white/5 peer-checked:text-rama-maroon peer-checked:border-rama-maroon transition-all hover:bg-rama-white/5 flex flex-col items-center gap-2 group-hover:scale-[1.02]">
                       <span className="text-2xl group-hover:animate-pulse">✋</span>
                       <span className="font-medium">Hadir Hadir Hadir</span>
                     </div>
