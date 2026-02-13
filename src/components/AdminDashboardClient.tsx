@@ -129,7 +129,6 @@ export default function AdminDashboardClient({ initialParticipants, commentsCoun
         return matchesSearch && matchesSection;
     });
 
-    // Pagination Logic
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentItems = filteredParticipants.slice(indexOfFirstItem, indexOfLastItem);
