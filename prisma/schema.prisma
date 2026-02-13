@@ -18,6 +18,15 @@ model mst_user {
   createdAt DateTime @default(now())
 }
 
+model mst_schedule {
+  id          Int      @id @default(autoincrement())
+  start_date  DateTime
+  end_date    DateTime
+  status      Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+}
+
 model trn_register {
   id         Int        @id @default(autoincrement())
   name       String

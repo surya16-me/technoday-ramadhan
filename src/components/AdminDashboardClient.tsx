@@ -2,13 +2,16 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Users, Shuffle, Search, Plus, X, Loader2, CheckCircle2, Download, Filter } from "lucide-react";
+import { Users, Shuffle, Search, Plus, X, Loader2, CheckCircle2, Download, Filter, Calendar, Trash2, Edit, ChevronLeft, ChevronRight } from "lucide-react";
 import ShuffleCard from "@/components/ShuffleCard";
 import AdminShell from "@/components/AdminShell";
 import Alert from "@/components/Alert";
 import { SECTIONS } from "@/lib/constants";
 import * as XLSX from "xlsx";
 import { useCheckInParticipant, useCreateParticipant } from "@/hooks/useParticipants";
+import { createSchedule, deleteSchedule, updateScheduleStatus, updateSchedule } from "@/actions/scheduleActions";
+import DatePicker from "react-datepicker";
+import ModalConfirmation from "@/components/ModalConfirmation";
 
 interface Participant {
     id: number;
@@ -28,14 +31,39 @@ interface Participant {
 interface AdminDashboardClientProps {
     initialParticipants: any[];
     commentsCount: number;
+    initialSchedules: any[];
 }
 
-export default function AdminDashboardClient({ initialParticipants, commentsCount }: AdminDashboardClientProps) {
-    const [activeTab, setActiveTab] = useState<"list" | "shuffle">("list");
+export default function AdminDashboardClient({ initialParticipants, commentsCount, initialSchedules }: AdminDashboardClientProps) {
+    const [activeTab, setActiveTab] = useState<"list" | "shuffle" | "schedule">("list");
     const [participants, setParticipants] = useState(initialParticipants);
+    const [schedules, setSchedules] = useState(initialSchedules);
+    const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [filterSection, setFilterSection] = useState("");
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [activeSchedule, setActiveSchedule] = useState<any | null>(null); // For editing
+
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
+    // Confirmation Modal State
+    const [confirmationConfig, setConfirmationConfig] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        onConfirm: () => void;
+        variant: "danger" | "default" | "success";
+        isLoading: boolean;
+    }>({
+        isOpen: false,
+        title: "",
+        message: "",
+        onConfirm: () => { },
+        variant: "default",
+        isLoading: false
+    });
 
     // Alert State
     const [alertConfig, setAlertConfig] = useState<{
@@ -101,6 +129,16 @@ export default function AdminDashboardClient({ initialParticipants, commentsCoun
         return matchesSearch && matchesSection;
     });
 
+    // Pagination Logic
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = filteredParticipants.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(filteredParticipants.length / itemsPerPage);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, filterSection]);
+
     const handleExportExcel = () => {
         const dataToExport = filteredParticipants.map(p => ({
             "Nama": p.name,
@@ -162,6 +200,16 @@ export default function AdminDashboardClient({ initialParticipants, commentsCoun
                             <Shuffle className="w-4 h-4" />
                             Shuffle Mode
                         </button>
+                        <button
+                            onClick={() => setActiveTab("schedule")}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === "schedule"
+                                ? "bg-zinc-800 text-white shadow-sm"
+                                : "text-zinc-400 hover:text-zinc-200"
+                                }`}
+                        >
+                            <Calendar className="w-4 h-4" />
+                            Jadwal
+                        </button>
                     </div>
                 </div>
             </div>
@@ -222,14 +270,14 @@ export default function AdminDashboardClient({ initialParticipants, commentsCoun
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-zinc-800">
-                                    {filteredParticipants.length === 0 ? (
+                                    {currentItems.length === 0 ? (
                                         <tr>
                                             <td colSpan={6} className="px-6 py-12 text-center text-zinc-500">
                                                 Tidak ada data yang ditemukan.
                                             </td>
                                         </tr>
                                     ) : (
-                                        filteredParticipants.map((p) => (
+                                        currentItems.map((p) => (
                                             <tr key={p.id} className={`transition-colors ${p.isCheckedIn ? 'bg-islamic-green/5' : 'hover:bg-zinc-800/50'}`}>
                                                 <td className="px-6 py-4">
                                                     <label className="relative flex items-center justify-center cursor-pointer p-2">
@@ -299,70 +347,374 @@ export default function AdminDashboardClient({ initialParticipants, commentsCoun
                                 </tbody>
                             </table>
                         </div>
+
+                        {/* Pagination Footer */}
+                        {filteredParticipants.length > 0 && (
+                            <div className="flex items-center justify-between px-6 py-4 border-t border-zinc-800 bg-zinc-900/50">
+                                <div className="text-sm text-zinc-500">
+                                    Menampilkan {indexOfFirstItem + 1} sampai {Math.min(indexOfLastItem, filteredParticipants.length)} dari {filteredParticipants.length} data
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                        disabled={currentPage === 1}
+                                        className="p-2 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        <ChevronLeft className="w-5 h-5" />
+                                    </button>
+                                    <span className="text-sm font-medium text-zinc-300 px-2 min-w-[80px] text-center">
+                                        Halaman {currentPage} / {totalPages}
+                                    </span>
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                        disabled={currentPage === totalPages}
+                                        className="p-2 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        <ChevronRight className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            ) : activeTab === "schedule" ? (
+                <div className="space-y-4">
+                    <div className="flex justify-between items-center bg-zinc-900 border border-zinc-800 p-4 rounded-xl">
+                        <div>
+                            <h2 className="text-lg font-bold text-white">Atur Jadwal Registrasi</h2>
+                            <p className="text-zinc-400 text-sm">Jadwal pembukaan dan penutupan form registrasi.</p>
+                        </div>
+                        <button
+                            onClick={() => setIsScheduleModalOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-bold shadow-lg shadow-islamic-green/20 transition-all active:scale-95"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Tambah Jadwal
+                        </button>
+                    </div>
+
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-zinc-950/50 text-zinc-400 border-b border-zinc-800">
+                                    <tr>
+                                        <th className="px-6 py-4 font-medium">Status</th>
+                                        <th className="px-6 py-4 font-medium">Mulai</th>
+                                        <th className="px-6 py-4 font-medium">Selesai</th>
+                                        <th className="px-6 py-4 font-medium text-right">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-zinc-800">
+                                    {schedules.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={4} className="px-6 py-12 text-center text-zinc-500">
+                                                Belum ada jadwal yang dibuat.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        schedules.map((s) => (
+                                            <tr key={s.id} className="hover:bg-zinc-800/50 transition-colors">
+                                                <td className="px-6 py-4">
+                                                    <label className="relative inline-flex items-center cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="sr-only peer"
+                                                            checked={s.status}
+                                                            onChange={() => {
+                                                                setConfirmationConfig({
+                                                                    isOpen: true,
+                                                                    title: s.status ? "Non-aktifkan Jadwal?" : "Aktifkan Jadwal?",
+                                                                    message: s.status
+                                                                        ? "Jadwal ini tidak akan berlaku lagi untuk pendaftaran."
+                                                                        : "Jadwal ini akan dibuka untuk pendaftaran.",
+                                                                    variant: s.status ? "danger" : "success",
+                                                                    isLoading: false,
+                                                                    onConfirm: async () => {
+                                                                        setConfirmationConfig(prev => ({ ...prev, isLoading: true }));
+                                                                        try {
+                                                                            const res = await updateScheduleStatus(s.id, !s.status);
+                                                                            if (res.success) {
+                                                                                setSchedules(prev => prev.map(item =>
+                                                                                    item.id === s.id ? { ...item, status: !s.status } : item
+                                                                                ));
+                                                                                showAlert("Status jadwal diperbarui", "success");
+                                                                            } else {
+                                                                                throw new Error(res.error);
+                                                                            }
+                                                                        } catch (error) {
+                                                                            showAlert("Gagal update status", "error");
+                                                                        } finally {
+                                                                            setConfirmationConfig(prev => ({ ...prev, isOpen: false, isLoading: false }));
+                                                                        }
+                                                                    }
+                                                                });
+                                                            }}
+                                                        />
+                                                        <div className="w-11 h-6 bg-zinc-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                                                    </label>
+                                                </td>
+                                                <td className="px-6 py-4 text-zinc-300">
+                                                    {new Date(s.start_date).toLocaleString("id-ID")}
+                                                </td>
+                                                <td className="px-6 py-4 text-zinc-300">
+                                                    {new Date(s.end_date).toLocaleString("id-ID")}
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <button
+                                                        onClick={() => {
+                                                            setActiveSchedule(s);
+                                                            setIsScheduleModalOpen(true);
+                                                        }}
+                                                        className="text-zinc-500 hover:text-rama-gold transition-colors p-2"
+                                                    >
+                                                        <Edit className="w-5 h-5" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setConfirmationConfig({
+                                                                isOpen: true,
+                                                                title: "Hapus Jadwal?",
+                                                                message: "Tindakan ini tidak dapat dibatalkan.",
+                                                                variant: "danger",
+                                                                isLoading: false,
+                                                                onConfirm: async () => {
+                                                                    setConfirmationConfig(prev => ({ ...prev, isLoading: true }));
+                                                                    try {
+                                                                        const result = await deleteSchedule(s.id);
+                                                                        if (result.success) {
+                                                                            setSchedules(prev => prev.filter(item => item.id !== s.id));
+                                                                            showAlert("Jadwal dihapus", "success");
+                                                                        } else {
+                                                                            throw new Error(result.error);
+                                                                        }
+                                                                    } catch (e) {
+                                                                        showAlert("Gagal menghapus jadwal", "error");
+                                                                    } finally {
+                                                                        setConfirmationConfig(prev => ({ ...prev, isOpen: false, isLoading: false }));
+                                                                    }
+                                                                }
+                                                            });
+                                                        }}
+                                                        className="text-zinc-500 hover:text-racing-red transition-colors p-2"
+                                                    >
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             ) : (
                 <ShuffleCard />
-            )}
+            )
+            }
 
             {/* Check-in Confirmation Modal */}
-            {checkInTarget && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative text-center">
-                        <div className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-4 ${!checkInTarget.currentStatus ? 'bg-islamic-green/20' : 'bg-racing-red/20'}`}>
-                            {!checkInTarget.currentStatus ? (
-                                <CheckCircle2 className="w-8 h-8 text-islamic-green" />
-                            ) : (
-                                <X className="w-8 h-8 text-racing-red" />
-                            )}
-                        </div>
+            {
+                checkInTarget && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative text-center">
+                            <div className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-4 ${!checkInTarget.currentStatus ? 'bg-islamic-green/20' : 'bg-racing-red/20'}`}>
+                                {!checkInTarget.currentStatus ? (
+                                    <CheckCircle2 className="w-8 h-8 text-islamic-green" />
+                                ) : (
+                                    <X className="w-8 h-8 text-racing-red" />
+                                )}
+                            </div>
 
-                        <h3 className="text-xl font-bold text-white mb-2">
-                            {!checkInTarget.currentStatus ? "Konfirmasi Check-In" : "Batalkan Check-In"}
-                        </h3>
-                        <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
-                            {!checkInTarget.currentStatus ? (
-                                <>Apakah antum yakin ingin melakukan check-in untuk peserta <b>{checkInTarget.name}</b>?</>
-                            ) : (
-                                <>Apakah antum yakin ingin membatalkan status check-in untuk <b>{checkInTarget.name}</b>?</>
-                            )}
-                        </p>
+                            <h3 className="text-xl font-bold text-white mb-2">
+                                {!checkInTarget.currentStatus ? "Konfirmasi Check-In" : "Batalkan Check-In"}
+                            </h3>
+                            <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
+                                {!checkInTarget.currentStatus ? (
+                                    <>Apakah antum yakin ingin melakukan check-in untuk peserta <b>{checkInTarget.name}</b>?</>
+                                ) : (
+                                    <>Apakah antum yakin ingin membatalkan status check-in untuk <b>{checkInTarget.name}</b>?</>
+                                )}
+                            </p>
 
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setCheckInTarget(null)}
-                                className="flex-1 py-2.5 px-4 rounded-xl font-medium border border-zinc-700 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
-                            >
-                                Batal
-                            </button>
-                            <button
-                                onClick={() => confirmCheckIn()}
-                                className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-white transition-all active:scale-95 shadow-lg ${!checkInTarget.currentStatus
-                                    ? "bg-islamic-green hover:bg-emerald-600 shadow-islamic-green/20"
-                                    : "bg-racing-red hover:bg-red-700 shadow-racing-red/20"
-                                    }`}
-                            >
-                                {!checkInTarget.currentStatus ? "Ya, Check-In" : "Ya, Batalkan"}
-                            </button>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setCheckInTarget(null)}
+                                    className="flex-1 py-2.5 px-4 rounded-xl font-medium border border-zinc-700 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    onClick={() => confirmCheckIn()}
+                                    className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-white transition-all active:scale-95 shadow-lg ${!checkInTarget.currentStatus
+                                        ? "bg-islamic-green hover:bg-emerald-600 shadow-islamic-green/20"
+                                        : "bg-racing-red hover:bg-red-700 shadow-racing-red/20"
+                                        }`}
+                                >
+                                    {!checkInTarget.currentStatus ? "Ya, Check-In" : "Ya, Batalkan"}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Create Participant Modal */}
-            {isCreateModalOpen && (
-                <CreateParticipantModal
-                    onClose={() => setIsCreateModalOpen(false)}
-                    onSuccess={(msg) => {
-                        // refetch handled by hook via router.refresh() 
-                        // But we want to close modal and show alert
-                        setIsCreateModalOpen(false);
-                        showAlert(msg || "Peserta berhasil didaftarkan!", "success");
-                    }}
-                    onError={(msg) => showAlert(msg, "error")}
-                />
-            )}
-        </AdminShell>
+            {
+                isCreateModalOpen && (
+                    <CreateParticipantModal
+                        onClose={() => setIsCreateModalOpen(false)}
+                        onSuccess={(msg) => {
+                            // refetch handled by hook via router.refresh() 
+                            // But we want to close modal and show alert
+                            setIsCreateModalOpen(false);
+                            showAlert(msg || "Peserta berhasil didaftarkan!", "success");
+                        }}
+                        onError={(msg) => showAlert(msg, "error")}
+                    />
+                )
+            }
+            {/* Schedule Modal */}
+            {
+                isScheduleModalOpen && (
+                    <CreateScheduleModal
+                        initialData={activeSchedule}
+                        onClose={() => {
+                            setIsScheduleModalOpen(false);
+                            setActiveSchedule(null);
+                        }}
+                        onSuccess={(schedule) => {
+                            if (activeSchedule) {
+                                setSchedules(prev => prev.map(s => s.id === schedule.id ? schedule : s));
+                                showAlert("Jadwal berhasil diperbarui!", "success");
+                            } else {
+                                setSchedules(prev => [schedule, ...prev]);
+                                showAlert("Jadwal berhasil ditambahkan!", "success");
+                            }
+                            setIsScheduleModalOpen(false);
+                            setActiveSchedule(null);
+                        }}
+                        onError={(msg) => showAlert(msg, "error")}
+                    />
+                )
+            }
+
+            <ModalConfirmation
+                isOpen={confirmationConfig.isOpen}
+                title={confirmationConfig.title}
+                message={confirmationConfig.message}
+                onConfirm={confirmationConfig.onConfirm}
+                onCancel={() => setConfirmationConfig(prev => ({ ...prev, isOpen: false }))}
+                variant={confirmationConfig.variant}
+                isLoading={confirmationConfig.isLoading}
+            />
+        </AdminShell >
+    );
+}
+
+function CreateScheduleModal({
+    initialData,
+    onClose,
+    onSuccess,
+    onError
+}: {
+    initialData?: any,
+    onClose: () => void,
+    onSuccess: (schedule: any) => void,
+    onError: (msg: string) => void
+}) {
+    const [formData, setFormData] = useState({
+        start_date: initialData ? new Date(initialData.start_date) : new Date(),
+        end_date: initialData ? new Date(initialData.end_date) : new Date(Date.now() + 86400000), // +1 day
+        status: initialData ? initialData.status : true
+    });
+    const [isLoading, setIsLoading] = useState(false);
+    const isEditing = !!initialData;
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+
+        try {
+            const payload = {
+                ...formData,
+                start_date: formData.start_date.toISOString(),
+                end_date: formData.end_date.toISOString()
+            };
+
+            let result;
+            if (isEditing) {
+                result = await updateSchedule(initialData.id, payload);
+            } else {
+                result = await createSchedule(payload);
+            }
+
+            if (!result.success) throw new Error(result.error || `Gagal ${isEditing ? 'memperbarui' : 'membuat'} jadwal`);
+
+            onSuccess(result.data);
+        } catch (error: any) {
+            onError(error.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
+                <button onClick={onClose} className="absolute top-4 right-4 text-zinc-500 hover:text-white">
+                    <X className="w-5 h-5" />
+                </button>
+
+                <h2 className="text-xl font-bold mb-1">{isEditing ? "Edit Jadwal" : "Tambah Jadwal"}</h2>
+                <p className="text-zinc-500 text-sm mb-6">Atur waktu pembukaan form registrasi.</p>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-xs font-medium text-zinc-400 mb-1">Waktu Mulai</label>
+                        <DatePicker
+                            selected={formData.start_date}
+                            onChange={(date: Date | null) => date && setFormData({ ...formData, start_date: date })}
+                            showTimeSelect
+                            dateFormat="Pp"
+                            className="w-full bg-black/50 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:border-islamic-green outline-none transition-colors"
+                            wrapperClassName="w-full"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-zinc-400 mb-1">Waktu Selesai</label>
+                        <DatePicker
+                            selected={formData.end_date}
+                            onChange={(date: Date | null) => date && setFormData({ ...formData, end_date: date })}
+                            showTimeSelect
+                            dateFormat="Pp"
+                            className="w-full bg-black/50 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:border-islamic-green outline-none transition-colors"
+                            wrapperClassName="w-full"
+                        />
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            id="status"
+                            checked={formData.status}
+                            onChange={e => setFormData({ ...formData, status: e.target.checked })}
+                            className="w-4 h-4 rounded border-zinc-700 bg-zinc-800 text-islamic-green focus:ring-islamic-green"
+                        />
+                        <label htmlFor="status" className="text-sm text-zinc-300">Status Aktif</label>
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl mt-4 flex items-center justify-center gap-2"
+                    >
+                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
+                        {isEditing ? "Simpan Perubahan" : "Simpan Jadwal"}
+                    </button>
+                </form>
+            </div>
+        </div>
     );
 }
 

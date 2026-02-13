@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, AlertCircle, Loader2, Send, User, CreditCard, Smile, Briefcase } from "lucide-react";
 import { SECTIONS } from "@/lib/constants";
 import { useRegisterParticipant } from "@/hooks/useParticipants";
 
 import { validateInput } from "@/lib/validation";
+
+import { getScheduleStatus } from "@/actions/scheduleActions";
+
+// ... existing imports
 
 export default function RegistrationForm() {
   const [formData, setFormData] = useState({
@@ -18,8 +22,39 @@ export default function RegistrationForm() {
   });
 
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [scheduleStatus, setScheduleStatus] = useState({ isOpen: false, loading: true });
+
+  useEffect(() => {
+    getScheduleStatus().then((data) => {
+      setScheduleStatus({ isOpen: data.isOpen, loading: false });
+    });
+  }, []);
 
   const mutation = useRegisterParticipant();
+
+  if (scheduleStatus.loading) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center text-rama-gold/60">
+        <Loader2 className="w-8 h-8 animate-spin mb-4" />
+        <p>Memuat status pendaftaran...</p>
+      </div>
+    );
+  }
+
+  if (!scheduleStatus.isOpen) {
+    return (
+      <div className="w-full max-w-md mx-auto relative p-8 text-center bg-black/20 rounded-2xl border border-rama-gold/20 backdrop-blur-sm">
+        <div className="w-20 h-20 bg-rama-maroon/20 rounded-full flex items-center justify-center mx-auto mb-6 ring-4 ring-rama-maroon/10">
+          <AlertCircle className="w-10 h-10 text-rama-maroon" />
+        </div>
+        <h3 className="text-2xl font-bold text-rama-gold mb-4 font-serif">Pendaftaran Ditutup</h3>
+        <p className="text-rama-white/80 leading-relaxed">
+          Mohon maaf, pendaftaran saat ini sedang ditutup. <br />
+          Silakan cek kembali sesuai jadwal yang ditentukan.
+        </p>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

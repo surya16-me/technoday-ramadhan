@@ -40,8 +40,14 @@ export default async function AdminPage() {
     // Get total comments count
     const commentsCount = await prisma.trn_comment.count();
 
+    // Load schedules
+    const schedules = await prisma.mst_schedule.findMany({
+        orderBy: { created_at: 'desc' }
+    });
+
     return <AdminDashboardClient
         initialParticipants={participants}
         commentsCount={commentsCount}
+        initialSchedules={schedules}
     />;
 }
