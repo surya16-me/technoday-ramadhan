@@ -169,7 +169,6 @@ export default function AdminDashboardClient({ initialParticipants, commentsCoun
                 </div>
 
                 <div className="flex gap-4">
-                    {/* Add Walk-in Button */}
                     <button
                         onClick={() => setIsCreateModalOpen(true)}
                         className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-bold shadow-lg shadow-islamic-green/20 transition-all active:scale-95"
